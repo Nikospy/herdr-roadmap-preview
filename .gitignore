@@ -1,0 +1,5 @@
+mockups/
+node_modules/
+.DS_Store
+gpui-kit.d.ts
+jsconfig.json
