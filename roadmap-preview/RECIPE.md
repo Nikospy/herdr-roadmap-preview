@@ -1,6 +1,6 @@
 # Roadmap Preview
 
-A pane beside the terminal that draws a project's 10x roadmap (`context/foundation/roadmap.md`) as a map. Milestones run left to right like stretches of one road. Inside a milestone every roadmap item is a station and every prerequisite is a line, so you see at a glance what is done, what an agent is working on, what can start now, what is still blocked and by what, and where the records disagree. A band on top answers "what now" in one line. Closed milestones fold to dots and unfold in place from the file's git history.
+A full-window dialog (or a pane) that draws a project's 10x roadmap (`context/foundation/roadmap.md`) as a map. Milestones run left to right like stretches of one road. Inside a milestone every roadmap item is a station and every prerequisite is a line, so you see at a glance what is done, what an agent is working on, what can start now, what is still blocked and by what, and where the records disagree. A band on top answers "what now" in one line. Closed milestones fold to dots and unfold in place from the file's git history.
 
 ![Roadmap Preview](preview.png)
 
@@ -8,13 +8,13 @@ A pane beside the terminal that draws a project's 10x roadmap (`context/foundati
 
 Top to bottom, on the theme's `background`:
 
-1. **Header**, 32 px, on `chrome`: the project name (13 px, `foreground`), the roadmap's path with `~` (11 px, `dim`, truncated), then `N of M done` (11 px, `muted`) and `N mismatches` (11 px, `ansi1` when above zero, else `muted`), then `×` that closes the pane.
+1. **Header**, 32 px, on `chrome`: the project name (13 px, `foreground`), the roadmap's path with `~` (11 px, `dim`, truncated), then `N of M done` (11 px, `muted`) and `N mismatches` (11 px, `ansi1` when above zero, else `muted`), the zoom controls `− 113% + Fit` (11 px, `muted`), then `×` that closes it.
 2. **Now band**, on `chrome`, 24 px padding, a 1 px `border` line above and below, so it reads as its own group and not as part of the map. Three columns, 64 px apart, each with an 11 px uppercase caption in `muted`:
    - **Now**: every item in progress, 16 px semibold `foreground`, with the agent's note from its status in `ansi4` (blue), e.g. `S-14 Check items off without signal  claude, phase 2 of 3`. At most four, then `and N more`.
    - **Ready to start**: the ids of items whose prerequisites are all done, joined with ` · `.
    - **Waiting**: `S-15 for S-14 · S-16 for S-14, S-17`, in `muted`.
    - An empty column says `nothing` in `muted`.
-3. **Map**, scrolls both ways. 32 px under the band, milestones start on a 24 px left axis:
+3. **Map**, zoomable (sizes below are at 100 %). 32 px under the band, milestones start on a 24 px left axis:
    - **Closed milestone, folded**: a 64 px column: `▸ M-1` (11 px), its item count, then one 6 px dot per item, four to a row: filled `ansi2` at 80 % for done, a 1 px `dim` ring for anything else.
    - **Open, queued or unfolded milestone**: a head of `M-3 · open` (11 px `muted`), the milestone's name (13 px semibold `foreground`; an unfolded closed one in `muted`, regular weight, with `▾`), and `N of M` (11 px `muted`). Items sit on a grid of 200 px columns and 104 px rows, starting 128 px below the head.
    - **Station** (12 px circle on a 22 px `background` disc that cuts the lines):
@@ -31,6 +31,8 @@ Top to bottom, on the theme's `background`:
 
 ## How it behaves
 
+- **Opening**: `mod.json` has `"overlay": {"kind": "dialog", "width": 1, "height": 1}`, so `mod.open {name: "roadmap-preview"}` opens it over the whole window and toggles it; Esc or `×` (`closeOverlay(props().overlay)`) closes it. A **Roadmap** button in the tab bar (icon `roadmap.svg`, 14 px, after Changes) runs `mod.open`. It also works as a pane (`pane.split`) or a layout block.
+- **Zoom and move**: the map has its own viewport, zoom 30–300 %. cmd/ctrl + scroll zooms around the pointer; scroll, drag and arrow keys move; `+` `-` zoom, `0` fits, `1` is 100 %; the header's `− 100% + Fit` do the same. It opens fitted: the whole map in view, clamped to 60–160 %; still too wide, it starts at the open milestone. A map smaller than the view sits in its middle. Header, Now band and legend don't zoom.
 - **Finding the roadmap**: from `props.file` (a roadmap file) or `props.folder` (a project), else from the folder of the focused terminal, the other terminals in the same tab and the shown space's folder, walking up at most eight folders to find `context/foundation/roadmap.md`.
 - **As a side panel** (a layout block with `props: { role: "panel" }`, e.g. a third child of the `panel-body` stack next to `files` and `changes`): every 2 s it compares the focused space and terminal folder with the last ones; when they changed, it looks for a roadmap again and switches only if it found a different file. `open:` pins a roadmap; `roadmap-preview.follow` unpins. `×` runs `layout.hide {id: "panel"}` instead of closing a pane. The empty state says to switch to a terminal inside a project. A **Roadmap** button in the tab bar (icon `roadmap.svg`, 14 px, next to Files and Changes) selects the `roadmap` child and shows the panel, like the other two.
 - **Live**: it watches the roadmap's folder and redraws when the file changes, so an agent ticking an item off shows up at once.
@@ -48,7 +50,7 @@ Top to bottom, on the theme's `background`:
 - Layout of a milestone (`layout()` in `parse.js`): the column is the item's dependency depth inside its milestone; a chain keeps its row and each branch takes the next free row; items with no links at all fill a block under the chains, five to a column.
 - `herdr`: `props`, `panes`, `focused`, `spaces`, `readTextFile`, `watchFolder`, `theme`, `exec`, `run("pane.close")`, `nextCommand`, `home`.
 - Programs: `git` (`rev-parse`, `log -G ^milestone_seq:`, `show <commit>^:<path>`), run in the roadmap's repo, read only.
-- Drawing: absolutely placed `div`s (stations, labels, lines as zero-width bordered boxes with `border_dashed` for blocked links) inside one `overflow_scroll` area. No images.
+- Drawing: every map size is multiplied by the zoom (no transforms in GPUI), inside an `overflow_hidden` viewport moved by an offset; absolutely placed `div`s (stations, labels, lines as zero-width bordered boxes with `border_dashed` for blocked links) No images.
 
 ## Watch out
 
@@ -66,4 +68,5 @@ Top to bottom, on the theme's `background`:
 - Opened beside a terminal in a project with a roadmap, it shows that project; in a folder without one it says "No roadmap here".
 - With `example/make-demo.sh`: M-1 and M-2 are folded to 8 and 7 dots; M-3 shows S-14 blue with `claude, phase 2 of 3` under it and in the Now band; S-15 and S-16 are waiting with dashed lines from S-14 (and from S-17 into S-16); S-18 has the red mark; M-4 is queued with S-21 and S-22 waiting for S-20.
 - Clicking M-1 unfolds it: eight items, S-04 shown done with the red mark (closed while still `in-progress`); clicking its head folds it.
+- `mod.open` shows it over the whole window, fitted; `roadmap-preview.zoom:in` twice zooms around the middle to 176 % from 113 %.
 - Changing a status in the roadmap file redraws the map within a second.

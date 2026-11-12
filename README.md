@@ -1,6 +1,6 @@
 # herdr-roadmap-preview
 
-**See where your project stands without asking an agent.** A [Herdr](https://herdr.dev) mod that draws a 10x roadmap as a map, in a pane beside the terminal where your agents work.
+**See where your project stands without asking an agent.** A [Herdr](https://herdr.dev) mod that draws a 10x roadmap as a map: one click opens it over the whole window, zoomable, for the project you're working in.
 
 ![Roadmap Preview](roadmap-preview/preview.png)
 
@@ -46,11 +46,13 @@ cp -R herdr-roadmap-preview/roadmap-preview/mods/roadmap-preview ~/.config/herdr
 herdr-app check ~/.config/herdr-app/mods/roadmap-preview
 ```
 
-Open it beside a terminal that sits anywhere inside a project with a roadmap:
+Open it over the whole window, for the project of the focused terminal (again, or Esc, closes it):
 
 ```sh
-herdr-app do pane.split '{"direction":"right","mod":"roadmap-preview"}'
+herdr-app do mod.open --name roadmap-preview
 ```
+
+Or as a pane beside a terminal: `herdr-app do pane.split '{"direction":"right","mod":"roadmap-preview"}'`.
 
 Or point it at a project: `herdr-app do roadmap-preview.open:/path/to/project`.
 
@@ -58,26 +60,30 @@ No roadmap at hand? Build a demo project with three milestones and a git history
 
 ```sh
 bash herdr-roadmap-preview/example/make-demo.sh /tmp/roadmap-demo
+herdr-app do mod.open --name roadmap-preview
 herdr-app do roadmap-preview.open:/tmp/roadmap-demo
 ```
 
-## As a side panel, next to Files and Changes
+## Zoom and move
 
-The pane is handy for a look; as a side panel it's always one click away. In your own layout (clone `main` first: `herdr-app do layout.clone '{"name":"main","as":"my-layout"}'`), add a third block to the `panel-body` stack, after `files` and `changes`:
+- **cmd/ctrl + scroll** zooms around the pointer (30 % to 300 %); the header has **−**, the zoom level (click: 100 %), **+** and **Fit**.
+- **Scroll** or **drag** moves around the map; the arrow keys too.
+- Keys: `+` and `-` zoom, `0` fits, `1` goes back to 100 %.
+- It opens fitted: the whole map in view, between 60 % and 160 %; a map still too wide starts at the open milestone.
 
-```json
-{ "id": "roadmap", "type": "block", "content": { "mod": "roadmap-preview", "props": { "role": "panel" } } }
-```
+## A Roadmap button next to Files and Changes
 
-In the panel it follows you: switch to a terminal in another project and the map switches to that project's roadmap. `×` hides the panel.
-
-The Files and Changes buttons live in the tab bar mod. To get a **Roadmap** button beside them, clone it (`herdr-app do mod.clone '{"name":"tabs","as":"my-tabs"}'`, then point your layout's tab bar at `my-tabs`) and add one line after the Changes button:
+The Files and Changes buttons live in the tab bar mod. Clone it (`herdr-app do mod.clone '{"name":"tabs","as":"my-tabs"}'`, then point your layout's tab bar at `my-tabs`) and add a button after the Changes one:
 
 ```js
-.when(Boolean(find(root, "roadmap")), el => el.child(panelButton("roadmap", "Roadmap", "mods/roadmap-preview/roadmap.svg")))
+.child(h_flex().id("open-roadmap").h(26).px(8).gap(5).flex_none().items_center().rounded(6)
+  .text_size(12).bg(t.chrome).text_color(t.muted).hover(s => s.bg(t.hover).text_color(t.foreground))
+  .on_mouse_down("left", stop)
+  .on_click(() => run("mod.open", { name: "roadmap-preview" }))
+  .child(svg("mods/roadmap-preview/roadmap.svg").size(14)).child("Roadmap"))
 ```
 
-and let the panel memory accept it: where `enabled` is defined, append `"roadmap"` when `find(root, "roadmap")` is there.
+It can also sit in a layout as a side panel: a block with `{ "mod": "roadmap-preview", "props": { "role": "panel" } }`, which follows the project you're in.
 
 ## Commands
 
@@ -86,13 +92,14 @@ and let the panel memory accept it: where `enabled` is defined, append `"roadmap
 | `roadmap-preview.open:<file or folder>` | show another roadmap |
 | `roadmap-preview.unfold:<n>` | unfold closed milestone M-n |
 | `roadmap-preview.fold:<n>` | fold it again |
+| `roadmap-preview.zoom:in`, `zoom:out`, `zoom:fit`, `zoom:1` | zoom |
 | `roadmap-preview.follow` | (side panel) go back to following the project you're in |
 
 ## Good to know
 
 - It only reads: the roadmap file and `git` in the roadmap's repository. It never writes.
 - Colors come from your Herdr theme (green, blue and red are the theme's ANSI 2, 4 and 1).
-- Lines are horizontal and vertical only: Herdr mods draw boxes, not paths.
+- Lines are horizontal and vertical only: Herdr mods draw boxes, not paths. Zoom redraws every size times the zoom, since mods have no transforms.
 - The full build brief, for an agent rebuilding or changing it, is in [RECIPE.md](roadmap-preview/RECIPE.md).
 
 ## Credits

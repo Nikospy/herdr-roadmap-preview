@@ -1,1 +1,1 @@
-{ "place": "none", "title": "Roadmap Preview" }
+{ "place": "none", "title": "Roadmap Preview", "overlay": { "kind": "dialog", "width": 1, "height": 1 } }
